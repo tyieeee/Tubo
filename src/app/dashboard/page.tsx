@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <li>
               <a href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 font-medium transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.707.293H19a2 2 0 012-2V11a2 2 0 012-2h5.586a1 1 0 01.707-.293l-5.414-5.414A1 1 0 01.8.586 6H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 012-2V5a2 2 0 012-2h5.586a1 1 0 011.707.293l5.414 5.414a1 1 0 011.707.293H19a2 2 0 012-2V11a2 2 0 012-2h5.586a1 1 0 011.707-.293l-5.414-5.414A1 1 0 011.586 6H3" />
                 </svg>
                 Invoices
               </a>
@@ -331,14 +331,16 @@ export default function DashboardPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 p-4 bg-white rounded-xl shadow-md border border-slate-200">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-              <h2 className="text-lg font-semibold text-slate-900">Invoices</h2>
-              <div className="relative w-full sm:w-64">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4 w-full lg:w-auto">
+              <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 sm:flex-none sm:w-64">
                 <input
                   type="text"
                   placeholder="Search by invoice # or customer name..."
-                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 w-full"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white"
                   value={filters.invoice_number}
                   onChange={(e) => handleFilterChange('invoice_number', e.target.value)}
                 />
@@ -349,7 +351,7 @@ export default function DashboardPage() {
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 w-full sm:w-auto"
+                className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white min-w-[140px]"
               >
                 <option value="">All Status</option>
                 <option value="PENDING">Pending</option>
@@ -358,16 +360,16 @@ export default function DashboardPage() {
                 <option value="SUBMITTED">Submitted</option>
                 <option value="FAILED">Failed</option>
               </select>
+              <button
+                onClick={() => router.push('/invoices/create')}
+                className="bg-slate-800 text-white px-6 py-2.5 rounded-lg hover:bg-slate-900 font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Invoice
+              </button>
             </div>
-            <button
-              onClick={() => router.push('/invoices/create')}
-              className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-900 font-medium flex items-center gap-2 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Create Invoice
-            </button>
           </div>
 
           {/* Invoice Table */}
