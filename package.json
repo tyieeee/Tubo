@@ -1,0 +1,41 @@
+{
+  "name": "tubo",
+  "version": "1.0.0",
+  "description": "E-invoicing platform",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "tsx src/worker/index.ts",
+    "migrate": "tsx src/lib/db/migrate.ts",
+    "seed": "tsx src/lib/db/seed.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "bcrypt": "^5.1.1",
+    "jose": "^5.9.6",
+    "next": "^15.1.4",
+    "pg": "^8.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitest/ui": "^3.0.6",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.1.4",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.6"
+  }
+}
