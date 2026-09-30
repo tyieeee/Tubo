@@ -496,12 +496,6 @@ export default function CreateInvoicePage() {
                   </tfoot>
                 </table>
               </div>
-
-              {/* Note */}
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="text-xs text-gray-500 uppercase mb-1">Note</div>
-                <p className="text-sm text-gray-700">There will be a late payment fee of 10% per annum calculated daily for payments made after the due date.</p>
-              </div>
             </div>
           </div>
         </div>
