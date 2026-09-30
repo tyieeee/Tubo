@@ -31,6 +31,7 @@ export default function CreateInvoicePage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Generate invoice number only on client to avoid hydration mismatch
@@ -99,6 +100,7 @@ export default function CreateInvoicePage() {
   const onSubmit = async (data: InvoiceForm) => {
     setError('');
     setLoading(true);
+    setSuccess(false);
 
     try {
       const payload = {
@@ -121,10 +123,16 @@ export default function CreateInvoicePage() {
         return;
       }
 
-      router.push('/dashboard');
+      // Show success notification
+      setSuccess(true);
+      setLoading(false);
+
+      // Delay navigation to show the notification
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
     } catch (err) {
       setError('Network error');
-    } finally {
       setLoading(false);
     }
   };
@@ -153,6 +161,15 @@ export default function CreateInvoicePage() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Invoice created successfully! Redirecting to dashboard...</span>
           </div>
         )}
 
@@ -214,7 +231,7 @@ export default function CreateInvoicePage() {
               <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
                 <div className="flex items-center gap-2 mb-4">
                   <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.707.293H19a2 2 0 012-2V11a2 2 0 012-2h5.586a1 1 0 01.707-.293l-5.414-5.414A1 1 0 01.8.586 6H3" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 012-2V5a2 2 0 012-2h5.586a1 1 0 011.707.293l5.414 5.414a1 1 0 011.707.293H19a2 2 0 012-2V11a2 2 0 012-2h5.586a1 1 0 011.707-.293l-5.414-5.414A1 1 0 011.586 6H3" />
                   </svg>
                   <h3 className="text-sm font-semibold text-slate-900 uppercase">Invoice Details</h3>
                 </div>
