@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { poolDirect } from '../db';
+import 'dotenv/config';
 
 async function migrate() {
   const client = await poolDirect.connect();

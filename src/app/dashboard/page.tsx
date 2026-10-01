@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import InvoiceModal from '@/components/InvoiceModal';
+import { sileo } from 'sileo';
 
 interface Invoice {
   id: string;
@@ -12,6 +14,8 @@ interface Invoice {
   total_amount: string;
   status: string;
   created_at: string;
+  external_reference?: string;
+  last_error?: string;
 }
 
 export default function DashboardPage() {
@@ -30,6 +34,12 @@ export default function DashboardPage() {
   const [total, setTotal] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -63,7 +73,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchInvoices();
+    fetchUserEmail();
   }, [page]);
+
+  const fetchUserEmail = async () => {
+    try {
+      const response = await fetch('/api/v1/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        setUserEmail(data.email || '');
+        setCompanyName(data.companyName || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch user email:', error);
+    }
+  };
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters({ ...filters, [key]: value });
@@ -91,6 +115,25 @@ export default function DashboardPage() {
       }
     };
   }, []);
+
+  // Dark mode effect
+  useEffect(() => {
+    const saved = localStorage.getItem('darkMode');
+    if (saved === 'true') {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('darkMode', 'false');
+    }
+  }, [darkMode]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -139,7 +182,7 @@ export default function DashboardPage() {
                   src="/img/logo.png" 
                   alt="Tubo" 
                   width={120} 
-                  height={40}
+                  height={50}
                   className="h-8 w-auto"
                 />
               </div>
@@ -174,18 +217,37 @@ export default function DashboardPage() {
             </div>
             {/* Right side */}
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Toggle dark mode"
+              >
+                {darkMode ? (
+                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
               <div className="relative avatar-dropdown">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white text-sm font-medium hover:bg-gray-700 transition-colors"
                 >
-                  A
+                  {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
                 </button>
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-xs text-gray-500 font-medium">Company</p>
+                      <p className="text-sm text-gray-900 font-semibold">{companyName}</p>
+                    </div>
                     <button
-                      onClick={() => {
-                        localStorage.removeItem('token');
+                      onClick={async () => {
+                        await fetch('/api/v1/auth/logout', { method: 'POST' });
                         router.push('/login');
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -333,7 +395,7 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <button
-                  onClick={() => router.push('/invoices/create')}
+                  onClick={() => setIsModalOpen(true)}
                   className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 text-sm font-medium flex items-center gap-2 transition-colors tracking-wide"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -401,6 +463,19 @@ export default function DashboardPage() {
                           </button>
                           <button
                             onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setIsProgressModalOpen(true);
+                            }}
+                            className="text-gray-600 hover:text-blue-600 transition-colors"
+                            title="View Progress"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => {
                               if (confirm('Are you sure you want to delete this invoice?')) {
                                 fetch(`/api/v1/invoices/${invoice.id}`, {
                                   method: 'DELETE',
@@ -450,6 +525,173 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Invoice Modal */}
+      <InvoiceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          fetchInvoices();
+        }}
+      />
+
+      {/* Progress Modal */}
+      {isProgressModalOpen && selectedInvoice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Invoice Progress</h3>
+              <button
+                onClick={() => setIsProgressModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                {[
+                  { label: 'Validation', status: 'completed' },
+                  { label: 'Government API', status: ['PROCESSING', 'RETRYING'].includes(selectedInvoice.status) ? 'active' : selectedInvoice.status === 'SUBMITTED' ? 'completed' : 'pending' },
+                  { label: 'Confirmation', status: selectedInvoice.status === 'SUBMITTED' ? 'completed' : 'pending' },
+                  { label: 'Final', status: 'pending' },
+                ].map((step, index) => (
+                  <div key={step.label} className="flex flex-col items-center flex-1">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
+                      step.status === 'completed' ? 'bg-green-500 text-white' :
+                      step.status === 'active' ? 'bg-green-500 text-white' :
+                      'bg-gray-200 text-gray-500'
+                    }`}>
+                      {step.status === 'completed' ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : step.status === 'active' ? (
+                        <span className="text-sm font-bold">{index + 1}</span>
+                      ) : (
+                        <span className="text-sm font-medium">{index + 1}</span>
+                      )}
+                    </div>
+                    <span className={`text-xs mt-2 font-medium transition-all duration-500 ${
+                      step.status === 'completed' || step.status === 'active' ? 'text-green-500' :
+                      'text-gray-400'
+                    }`}>
+                      {step.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Progress Line */}
+              <div className="relative h-1 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`absolute h-full bg-green-500 rounded-full ${
+                    ['PROCESSING', 'RETRYING'].includes(selectedInvoice.status) ? 'animate-move-back-forth' : ''
+                  } transition-all duration-700 ease-in-out`}
+                  style={{
+                    width: selectedInvoice.status === 'PENDING' ? '0%' :
+                           selectedInvoice.status === 'PROCESSING' || selectedInvoice.status === 'RETRYING' ? '50%' :
+                           selectedInvoice.status === 'SUBMITTED' ? '75%' :
+                           '0%'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Current Status Card */}
+              <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                ['PROCESSING', 'RETRYING'].includes(selectedInvoice.status) ? 'border-green-500 bg-green-50' :
+                selectedInvoice.status === 'SUBMITTED' ? 'border-green-500 bg-green-50' :
+                selectedInvoice.status === 'FAILED' ? 'border-red-500 bg-red-50' :
+                'border-gray-200 bg-gray-50'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      ['PROCESSING', 'RETRYING'].includes(selectedInvoice.status) ? 'bg-green-500' :
+                      selectedInvoice.status === 'SUBMITTED' ? 'bg-green-500' :
+                      selectedInvoice.status === 'FAILED' ? 'bg-red-500' :
+                      'bg-gray-400'
+                    }`} />
+                    <span className="font-semibold text-gray-900">Current Status</span>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    ['PROCESSING', 'RETRYING'].includes(selectedInvoice.status) ? 'bg-green-500 text-white' :
+                    selectedInvoice.status === 'SUBMITTED' ? 'bg-green-500 text-white' :
+                    selectedInvoice.status === 'FAILED' ? 'bg-red-500 text-white' :
+                    'bg-gray-200 text-gray-600'
+                  }`}>
+                    {selectedInvoice.status}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {selectedInvoice.status === 'PENDING' && 'Your invoice is queued and will be submitted to the government API shortly.'}
+                  {selectedInvoice.status === 'PROCESSING' && 'Your invoice is currently being processed by the government API. This may take a few moments.'}
+                  {selectedInvoice.status === 'RETRYING' && 'The previous submission attempt failed. The system will automatically retry.'}
+                  {selectedInvoice.status === 'SUBMITTED' && 'Your invoice has been successfully submitted to the government and confirmed.'}
+                  {selectedInvoice.status === 'FAILED' && 'The invoice submission failed. Please check the error details and try again.'}
+                </p>
+              </div>
+
+              {/* Next Steps Card */}
+              <div className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                selectedInvoice.status === 'PENDING' ? 'border-green-500 bg-green-50' :
+                'border-gray-200 bg-gray-50'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      selectedInvoice.status === 'PENDING' ? 'bg-green-500' : 'bg-gray-400'
+                    }`} />
+                    <span className="font-semibold text-gray-900">What's Next</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {selectedInvoice.status === 'PENDING' && 'System will validate invoice data and submit to government API within 30 seconds.'}
+                  {selectedInvoice.status === 'PROCESSING' && 'Government API is processing your invoice. Awaiting response...'}
+                  {selectedInvoice.status === 'RETRYING' && 'System will retry submission automatically in 30 seconds.'}
+                  {selectedInvoice.status === 'SUBMITTED' && 'Invoice is complete. You can download the receipt or view details.'}
+                  {selectedInvoice.status === 'FAILED' && 'Review the error details below and retry submission manually.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="space-y-3">
+              {selectedInvoice.external_reference && (
+                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                  <p className="text-sm font-semibold text-green-800 mb-1">Government Reference</p>
+                  <p className="text-sm text-green-700 font-mono">{selectedInvoice.external_reference}</p>
+                </div>
+              )}
+
+              {selectedInvoice.last_error && (
+                <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <p className="text-sm font-semibold text-red-800 mb-1">Error Details</p>
+                  <p className="text-sm text-red-700">{selectedInvoice.last_error}</p>
+                </div>
+              )}
+
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-sm font-semibold text-gray-900 mb-1">Invoice Details</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <span className="text-gray-600">Invoice #:</span>
+                  <span className="text-gray-900 font-medium">{selectedInvoice.invoice_number}</span>
+                  <span className="text-gray-600">Amount:</span>
+                  <span className="text-gray-900 font-medium">${parseFloat(selectedInvoice.total_amount).toFixed(2)}</span>
+                  <span className="text-gray-600">Customer:</span>
+                  <span className="text-gray-900 font-medium">{selectedInvoice.customer_name}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

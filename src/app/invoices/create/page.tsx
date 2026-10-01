@@ -108,6 +108,10 @@ export default function CreateInvoicePage() {
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
         total_amount: totals.total,
+        items: data.items.map((item) => ({
+          ...item,
+          line_total: item.quantity * item.unit_price,
+        })),
       };
 
       const response = await fetch('/api/v1/invoices', {
@@ -120,6 +124,7 @@ export default function CreateInvoicePage() {
 
       if (!response.ok) {
         setError(result.error || 'Failed to create invoice');
+        setLoading(false);
         return;
       }
 

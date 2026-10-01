@@ -1,29 +1,31 @@
 import { Pool, PoolClient } from 'pg';
+import 'dotenv/config';
 
-// Try using IP address directly if DNS fails
-// Supabase project region: likely us-east-1 or similar
-// Common Supabase IPs for direct connection attempt
-const SUPABASE_IP = '52.21.116.21'; // This is a placeholder - we need the actual IP
+// Use Neon's connection string directly
+const DATABASE_URL = process.env.DATABASE_URL;
 
-// Build connection string with fallback
-const getConnectionString = (port: number) => {
-  const host = process.env.DB_HOST || 'db.ipmqudrcfnlzwlbxcejo.supabase.co';
-  const user = process.env.DB_USER || 'postgres';
-  const password = process.env.DB_PASSWORD || '9Ern466q8!123';
-  const database = process.env.DB_NAME || 'postgres';
-  return `postgresql://${user}:${password}@${host}:${port}/${database}`;
-};
+if (!DATABASE_URL) {
+  throw new Error('Missing DATABASE_URL in .env file');
+}
 
-// API uses transaction pooler (port 6543, no prepared statements)
+// API pool
 const pool = new Pool({
-  connectionString: getConnectionString(6543),
+  connectionString: DATABASE_URL,
   max: 20,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeoutMillis: 10000,
 });
 
-// Worker and migrations use direct connection (port 5432)
+// Worker and migrations pool
 const poolDirect = new Pool({
-  connectionString: getConnectionString(5432),
+  connectionString: DATABASE_URL,
   max: 5,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeoutMillis: 10000,
 });
 
 export { pool, poolDirect };

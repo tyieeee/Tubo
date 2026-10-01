@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCredentials, generateToken, setAuthCookie } from '@/lib/auth';
 import { loginSchema } from '@/lib/validation';
+import 'dotenv/config';
 
 // Simple rate limiter using in-memory map (reset on server restart)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -31,30 +32,30 @@ export async function POST(request: NextRequest) {
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ error: 'Too many login attempts' }, { status: 429 });
     }
-    
+
     const body = await request.json();
     const validated = loginSchema.parse(body);
-    
-    // TEMPORARY: Mock login (DNS issue with Supabase)
-    const mockUser = {
-      companyId: '00000000-0000-0000-0000-000000000001',
-      userId: '00000000-0000-0000-0000-000000000001',
-      email: validated.email,
-    };
-    
-    const token = await generateToken(mockUser);
+
+    // Verify credentials against database
+    const user = await verifyCredentials(validated.email, validated.password);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    const token = await generateToken(user);
     await setAuthCookie(token);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: 'Login successful',
-      user: { companyId: mockUser.companyId, userId: mockUser.userId, email: mockUser.email }
+      user: { companyId: user.companyId, userId: user.userId, email: user.email }
     });
-    
+
   } catch (error: any) {
     if (error.name === 'ZodError') {
       return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 });
     }
-    
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
