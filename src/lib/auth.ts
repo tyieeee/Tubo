@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { pool } from './db';
+import 'dotenv/config';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 

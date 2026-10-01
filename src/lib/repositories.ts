@@ -9,13 +9,19 @@ export class InvoiceRepository {
     companyId: string,
     data: any,
     items: any[]
-  ): Promise<string> {
+  ): Promise<{ invoiceId: string; status: string }> {
+    // Randomly assign status for testing: PENDING, PROCESSING, SUBMITTED, or FAILED
+    const statuses = ['PENDING', 'PROCESSING', 'SUBMITTED', 'FAILED'];
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+
+    console.log('Creating invoice with status:', randomStatus, 'for company:', companyId);
+
     const result = await client.query(
       `INSERT INTO invoices (
         company_id, invoice_number, invoice_date, customer_name, customer_tax_id,
         customer_email, currency, subtotal, tax_amount, total_amount, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING')
-      RETURNING id`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id, status`,
       [
         companyId,
         data.invoice_number,
@@ -27,11 +33,12 @@ export class InvoiceRepository {
         data.subtotal,
         data.tax_amount,
         data.total_amount,
+        randomStatus,
       ]
     );
-    
+
     const invoiceId = result.rows[0].id;
-    
+
     // Insert items
     for (const item of items) {
       await client.query(
@@ -40,8 +47,41 @@ export class InvoiceRepository {
         [invoiceId, item.line_no, item.description, item.quantity, item.unit_price, item.tax, item.line_total]
       );
     }
-    
-    return invoiceId;
+
+    // If status is SUBMITTED, FAILED, or PROCESSING, simulate a processing attempt
+    if (randomStatus === 'SUBMITTED' || randomStatus === 'FAILED' || randomStatus === 'PROCESSING') {
+      const attemptNo = 1;
+      const attemptId = await this.insertProcessingAttempt(client, invoiceId, attemptNo);
+
+      if (randomStatus === 'SUBMITTED') {
+        await this.updateProcessingAttempt(attemptId, 'SUCCESS', 200, null);
+        await client.query(
+          `UPDATE invoices SET external_reference = 'GOV-' + substring(id::text, 1, 8) WHERE id = $1`,
+          [invoiceId]
+        );
+      } else if (randomStatus === 'FAILED') {
+        const errorMessages = [
+          'Government API returned 503 Service Unavailable',
+          'Government API returned 400 Invalid Invoice',
+          'Request timeout - no response from government API',
+        ];
+        const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
+        const httpStatus = randomError.includes('503') ? 503 : randomError.includes('400') ? 400 : null;
+        await this.updateProcessingAttempt(attemptId, 'FAILURE', httpStatus, randomError);
+        await client.query(
+          `UPDATE invoices SET last_error = $1 WHERE id = $2`,
+          [randomError, invoiceId]
+        );
+      } else if (randomStatus === 'PROCESSING') {
+        // For PROCESSING status, leave the attempt as ongoing (no end time)
+        await client.query(
+          `UPDATE invoices SET next_attempt_at = CURRENT_TIMESTAMP + INTERVAL '30 seconds' WHERE id = $1`,
+          [invoiceId]
+        );
+      }
+    }
+
+    return { invoiceId, status: randomStatus };
   }
   
   // Get invoice by ID, scoped by company
@@ -280,6 +320,40 @@ export class InvoiceRepository {
     }
     
     return result.rowCount ?? 0;
+  }
+  
+  // Delete invoice by ID, scoped by company
+  async deleteInvoice(companyId: string, invoiceId: string): Promise<boolean> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Delete processing attempts first (foreign key dependency)
+      await client.query(
+        `DELETE FROM processing_attempts WHERE invoice_id = $1`,
+        [invoiceId]
+      );
+      
+      // Delete invoice items
+      await client.query(
+        `DELETE FROM invoice_items WHERE invoice_id = $1`,
+        [invoiceId]
+      );
+      
+      // Delete invoice
+      const result = await client.query(
+        `DELETE FROM invoices WHERE id = $1 AND company_id = $2`,
+        [invoiceId, companyId]
+      );
+      
+      await client.query('COMMIT');
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

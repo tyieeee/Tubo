@@ -1,10 +1,12 @@
 // Government API client
+import 'dotenv/config';
+
 export class GovClient {
   private baseUrl: string;
   private apiKey: string;
   
   constructor() {
-    this.baseUrl = process.env.GOV_API_URL || 'http://localhost:3000/api/mock-gov';
+    this.baseUrl = process.env.GOV_API_URL || 'http://localhost:3000/api/government-api';
     this.apiKey = process.env.GOV_API_KEY || '';
   }
   
@@ -12,9 +14,9 @@ export class GovClient {
   async submitInvoice(invoiceId: string, invoiceData: any): Promise<{ status: number; data?: any; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
-      const response = await fetch(`${this.baseUrl}/submit`, {
+      const response = await fetch(`${this.baseUrl}/invoices`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

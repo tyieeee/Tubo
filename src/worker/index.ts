@@ -1,6 +1,7 @@
 import { poolDirect } from '../lib/db';
 import { invoiceRepository } from '../lib/repositories';
 import { govClient } from '../lib/gov-client';
+import 'dotenv/config';
 
 // Worker configuration
 const WORKER_CONCURRENCY = 5;

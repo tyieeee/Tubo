@@ -1,5 +1,6 @@
 import { poolDirect } from '../db';
 import { hash } from 'bcrypt';
+import 'dotenv/config';
 
 async function seed() {
   const client = await poolDirect.connect();
